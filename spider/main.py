@@ -26,14 +26,25 @@ class YearSpider(object):
         # print(self.person_list)
         #print json.dumps(a, ensure_ascii=False)   #py3
         #print json.dumps(self.person_list,encoding='UTF-8',ensure_ascii=False)    #py2
+
+    def getContent(self,url,extra_headers=''):
+        """
+        发送请求，获得网页内容字符串
+        """
+        headers = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36'}
+
+        if extra_headers :
+            headers = {**headers,**extra_headers}
+
+        res = requests.get(url,headers=headers)
+        html = res.content.decode()
+        return html
     
-    def getHtmlBs(self,url):
+    def getHtmlBs(self,url,extra_headers=''):
         """
         发送请求，并且获得bs对象
         """
-        headers = {'User-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.183 Safari/537.36'}
-        res = requests.get(url,headers=headers)
-        html = res.content.decode()
+        html = self.getContent(url,extra_headers)
         bs = BeautifulSoup(html,'lxml')
         return bs
         
@@ -56,6 +67,9 @@ class YearSpider(object):
         return user_home_url
 
     def time_data(self,time_sj):                #传入单个时间比如'2019-8-01 00:00:00'，类型为str
+        """
+        用于时间转时间戳
+        """
         data_sj = time.strptime(time_sj,"%Y-%m-%d %H:%M:%S")       #定义格式
         time_int = int(time.mktime(data_sj))
         return time_int             #返回传入时间的时间戳，类型为int
@@ -68,9 +82,15 @@ class YearSpider(object):
         #https://post.smzdm.com/p/aekw8v6m/ -- 无打赏
 
         article_url = 'https://post.smzdm.com/p/apz0qkg9/'
-        article_bs = self.getHtmlBs(article_url)
-        span_list = article_bs.select('.recommend-tab>.xilie>span')
+        reward_url = 'https://zhiyou.smzdm.com/user/shang/jsonp_shang_list?channel_id=11&article_id=71219346&get_total=1&page=1&limit=1'
+        extra_headers = {'Host':'zhiyou.smzdm.com','Referer':'https://post.smzdm.com/'}
 
+        article_bs = self.getHtmlBs(article_url)    #获取文章HTML
+        reward_json = self.getContent(reward_url,extra_headers)    #获取文章打赏数据
+        reward_data = json.loads(reward_json)
+        reward = int(reward_data['data']['total'])
+
+        span_list = article_bs.select('.recommend-tab>.xilie>span')
         for idx,val in enumerate(span_list):
             if idx == 0:
                 add_time = self.time_data(val.string)
@@ -81,8 +101,16 @@ class YearSpider(object):
             elif idx == 3:
                 comment = int(re.findall(r'\d+',val.string)[0])
         
-        reward_bs = article_bs.find_all('a',class_='gratuity-num')
-        print(reward_bs)
+        info['like'] += like
+        info['collect'] += collect
+        info['comment'] += comment
+        info['reward'] += reward
+        info['hot'] += like + collect + comment + reward
+        info['count']+=1
+
+        print(info)
+        #reward_bs = article_bs.find_all('a',class_='gratuity-num')
+        #print(reward_data['data']['total'])
 
     def getUserHot(self,user_name,limit_time=''):
         """
