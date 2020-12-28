@@ -120,39 +120,43 @@ class YearSpider(object):
         根据用户名，获取该用户所有文章热度
         """
         user_home_url = self.getUserLinkByName(user_name)
-        
-        bs = self.getHtmlBs(user_home_url)
-        pages = bs.select(".pagination>li>a")
-        bs_len = len(pages)
-
-        #user_hot = self.getUserHotForOne(bs,begin_date,over_date)
-        #user_hot['user_name'] = user_name
-
-        #可能的最大遍历次数
-        max_page = pages[-3].string if bs_len else 1
-        
         info = {'user_name':user_name,'like':0,'collect':0,'comment':0,'reward':0,'hot':0,'count':0}
-        for i in range(int(max_page)):
-            page_url = user_home_url + 'p' + str(i+1)
-            res = self.getArticleHot(page_url,begin_date,over_date)
 
-            exit_flag = res['exit_flag']
-            hot_info = res['data']
+        if user_home_url :
+            bs = self.getHtmlBs(user_home_url)
+            pages = bs.select(".pagination>li>a")
+            bs_len = len(pages)
 
-            info['like'] += hot_info['like']
-            info['collect'] += hot_info['collect']
-            info['comment'] += hot_info['comment']
-            info['reward'] += hot_info['reward']
-            info['hot'] += hot_info['hot']
-            info['count'] += hot_info['count']
+            #user_hot = self.getUserHotForOne(bs,begin_date,over_date)
+            #user_hot['user_name'] = user_name
 
-            print('已爬取用户：{'+ user_name + '} 第' + str(i+1) + '页数据')
+            #可能的最大遍历次数
+            max_page = pages[-3].string if bs_len else 1
+            
+            
+            for i in range(int(max_page)):
+                page_url = user_home_url + 'p' + str(i+1)
+                res = self.getArticleHot(page_url,begin_date,over_date)
 
-            if exit_flag :
-                return info
+                exit_flag = res['exit_flag']
+                hot_info = res['data']
 
-        return info
+                info['like'] += hot_info['like']
+                info['collect'] += hot_info['collect']
+                info['comment'] += hot_info['comment']
+                info['reward'] += hot_info['reward']
+                info['hot'] += hot_info['hot']
+                info['count'] += hot_info['count']
 
+                print('已爬取用户：{'+ user_name + '} 第' + str(i+1) + '页数据')
+
+                if exit_flag :
+                    return info
+
+            return info
+        else :
+            print('用户{'+ user_name + '} 已删除')
+            return {'user_name':user_name+'（已删除）','like':0,'collect':0,'comment':0,'reward':0,'hot':0,'count':0}
     def run(self,person,begin_date='',over_date=''):    
         """
         启动爬虫，获取数据，导出Excel
